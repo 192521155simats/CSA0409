@@ -1,0 +1,78 @@
+Question 1:
+a)Multi user operating system allows multiple users to run multiple programs at a single time.any number of users could run n number of programs at a single time
+and it also ensures the smoothness in running the programs and ensures that no clash takes place between any two users or two different programs running at a single time.
+the main examples are LINUX and UNIX.
+b)Generally the main responsiblities of the kernel is the core of the operating system. It mainly maintains how the users share the details in between them.
+the kernel's main two responsibilities are RESOURCE MANAGEMENT and MEMORY MANAGEMENT.
+c) PSEUDOCODE for getting PID'S of both parent and child processes:
+1.import <stdio.h>,<unistd.h>
+2.get input from user for running number of child processes
+3.getting pid usinf fork method
+4.if(fork==0){
+    printf("child pid=%d,parent pid=%d",getpid(),getppid()}
+
+Question 2:
+a)The main system calls used for file creation, writing, reading, and closing are:
+ Creation: open()
+ Writing: write()
+ Reading: read()
+ Closing: close()
+b)the main purpose of write() and read() system calls are:
+write(): generally write function is used to write into a specific file . the system call gets input from the user for the number of bytes to be written into the file and there is 
+also an pointer in each and every file which which would move as the user would read or write into file. therefore,the function would get input from the user fro the number of bytes 
+to be written into the file and the poinet would move as the user begins to write into the file.
+read():the read function in the system calls is mainly used to read whatever content is present in the file.also,in this function the user would get input from the user the number 
+of bytes to be read from the file.the,as usual the pointer would be at the beginning of the file.as the user reads from the file the pointer would also move.
+c)PSEUDOCODE to create a file,write a student name and close the file:
+1.import <fcntil.h>,<stdio.h>,<unistd.h>
+2.first create a file using open() function
+3.write into the filr using write() function
+4.finally,close the file using close() function
+
+Question 3:
+a)calls required are:
+open()
+write()
+read()
+copy()
+close()
+b)the main purpose of write() and read() system calls are:
+write(): write function is used to write into a specific file given by the user . the system call gets input from the user for the number of bytes to be written into the file and an pointer is
+present in each and every file which which would move as the user would read or write into file.the function would get input from the user fro the number of bytes 
+to be written into the file and the poinet would move as the user begins to write into the file.
+read():the read function in the system calls is mainly used to read whatever content is present in the file.also,in this function the user would get input from the user the number 
+of bytes to be read from the file.the,as usual the pointer would be at the beginning of the file.as the user reads from the file the pointer would also move.
+c)PSEUDOCODE to copy contents from one file to another:
+1.import <fcntil.h>,<stdio.h>,<unistd.h>
+2.open the firts file in read mode
+2.open the second file in write mode
+3.read the contents from the first file and write the contents into the second file using read() andf write() function
+4.close bot the files
+
+Question 4:
+a)fork() It creates a new child process by duplicating the existing calling process (the parent). The child process gets a separate memory space but inherits copies of the parent's data,
+stack, heap, and open file descriptors.
+exec() It replaces the current process memory image with a brand-new program. When a process calls exec(), its current code, data are completely overwritten by the
+new executable program. No new process is created;the process ID (PID) remains the exact same.
+b)The main two processews are 
+1.PROCESS SYNCHRONIZATION
+2.RESOURCE CLEANUP
+c)PSEUDOCODE for system call
+1.import<unistd.h>,<stdio.h>
+2.use fork() and exec() function
+
+Question 5:
+a) The main processes in file manangemnt are:
+1.DATA INTEGRITY
+2.DATA MANAGEMENT
+3.ACCESS CONTROL
+4.RESOURCE SHARING
+5.MAINTAINING THE STORAGE
+b)open(): This call establishes a connection between a process and a file on disk. It searches for the file, verifies access permissions, allocates system resources, and opens the file in a way that is in user
+readable language.converts the binary program into the human readable file.
+close(): This call terminates the connection between the program and the compiler. It frees up system resources, flushes remaining data buffers to disk, and prevents accidental data modification.
+c)PSEUDOCODE to system calls:
+1.import<fcntil.h>,<stdiio.h><unistd.h>
+2.open the file using the create() function
+3.read the contents present in the file using read() function
+4. finally close the file using close() function.
