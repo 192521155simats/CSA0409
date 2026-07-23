@@ -1,0 +1,314 @@
+// Question 1
+// Display the Current Process ID of a Running Program
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+    printf("Current Process ID: %d\n", getpid());
+    return 0;
+}
+
+
+// Question 2
+// Create Two Child Processes and Print their IDs
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+    fork();
+    printf("Process ID: %d Parent ID: %d\n", getpid(), getppid());
+
+    fork();
+    printf("Process ID: %d Parent ID: %d\n", getpid(), getppid());
+
+    return 0;
+}
+
+
+// Question 3
+// Simulate a Ready Queue using Queue
+
+#include <stdio.h>
+
+#define MAX 5
+
+int queue[MAX];
+int front = -1, rear = -1;
+
+void enqueue(int process)
+{
+    if (rear == MAX - 1)
+    {
+        printf("Queue Full\n");
+        return;
+    }
+
+    if (front == -1)
+        front = 0;
+
+    queue[++rear] = process;
+}
+
+void dequeue()
+{
+    if (front == -1 || front > rear)
+    {
+        printf("Queue Empty\n");
+        return;
+    }
+
+    printf("Executing Process %d\n", queue[front]);
+    front++;
+}
+
+int main()
+{
+    enqueue(101);
+    enqueue(102);
+    enqueue(103);
+
+    dequeue();
+    dequeue();
+    dequeue();
+
+    return 0;
+}
+
+
+// Question 4
+// Simulate a Simple Scheduler that Executes Processes One by One
+
+#include <stdio.h>
+
+int main()
+{
+    int process[] = {1, 2, 3, 4};
+
+    printf("Simple Scheduler Execution:\n");
+
+    for (int i = 0; i < 4; i++)
+    {
+        printf("Running Process P%d\n", process[i]);
+    }
+
+    return 0;
+}
+
+
+// Question 5
+// Read and Write Data Using File System Calls
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main()
+{
+    int fd;
+    char data[] = "Hello Operating System";
+
+    fd = open("sample.txt", O_CREAT | O_WRONLY, 0644);
+
+    write(fd, data, sizeof(data));
+
+    close(fd);
+
+    printf("Data Written Successfully\n");
+
+    return 0;
+}
+
+
+// Question 6
+// Simulate FIFO Page Replacement Using Queue
+
+#include <stdio.h>
+
+int main()
+{
+    int pages[] = {1,2,3,4,1,2,5,1,2,3,4,5};
+    int frame[3];
+    int front = 0;
+    int faults = 0;
+
+    for(int i=0;i<3;i++)
+        frame[i] = -1;
+
+    for(int i=0;i<12;i++)
+    {
+        int found = 0;
+
+        for(int j=0;j<3;j++)
+        {
+            if(frame[j] == pages[i])
+            {
+                found = 1;
+                break;
+            }
+        }
+
+        if(!found)
+        {
+            frame[front] = pages[i];
+            front = (front + 1) % 3;
+            faults++;
+        }
+    }
+
+    printf("Page Faults = %d\n", faults);
+
+    return 0;
+}
+
+
+// Question 7
+// Allocate Memory Blocks Using Arrays
+
+#include <stdio.h>
+
+int main()
+{
+    int memory[5];
+
+    printf("Enter 5 Memory Block Sizes:\n");
+
+    for(int i=0;i<5;i++)
+    {
+        scanf("%d",&memory[i]);
+    }
+
+    printf("\nAllocated Memory Blocks:\n");
+
+    for(int i=0;i<5;i++)
+    {
+        printf("Block %d = %d\n", i+1, memory[i]);
+    }
+
+    return 0;
+}
+
+
+// Question 8
+// Create Two Threads that Print Numbers Alternately
+
+#include <stdio.h>
+#include <pthread.h>
+
+void *odd(void *arg)
+{
+    for(int i=1;i<=9;i+=2)
+    {
+        printf("Odd : %d\n", i);
+    }
+
+    return NULL;
+}
+
+void *even(void *arg)
+{
+    for(int i=2;i<=10;i+=2)
+    {
+        printf("Even : %d\n", i);
+    }
+
+    return NULL;
+}
+
+int main()
+{
+    pthread_t t1, t2;
+
+    pthread_create(&t1, NULL, odd, NULL);
+    pthread_create(&t2, NULL, even, NULL);
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    return 0;
+}
+
+
+// Question 9
+// Implement a Bounded Buffer Using Queue
+
+#include <stdio.h>
+
+#define SIZE 5
+
+int buffer[SIZE];
+int front = -1, rear = -1;
+
+void produce(int item)
+{
+    if(rear == SIZE - 1)
+    {
+        printf("Buffer Full\n");
+        return;
+    }
+
+    if(front == -1)
+        front = 0;
+
+    buffer[++rear] = item;
+
+    printf("Produced %d\n", item);
+}
+
+void consume()
+{
+    if(front == -1 || front > rear)
+    {
+        printf("Buffer Empty\n");
+        return;
+    }
+
+    printf("Consumed %d\n", buffer[front]);
+
+    front++;
+}
+
+int main()
+{
+    produce(10);
+    produce(20);
+    produce(30);
+
+    consume();
+    consume();
+    consume();
+
+    return 0;
+}
+
+
+// Question 10
+// Calculate Average Waiting Time for FCFS Scheduling
+
+#include <stdio.h>
+
+int main()
+{
+    int burst[] = {5,3,8,6,2};
+    int waiting[5];
+    int total = 0;
+
+    waiting[0] = 0;
+
+    for(int i=1;i<5;i++)
+    {
+        waiting[i] = waiting[i-1] + burst[i-1];
+    }
+
+    for(int i=0;i<5;i++)
+    {
+        total += waiting[i];
+    }
+
+    printf("Average Waiting Time = %.2f\n", (float)total/5);
+
+    return 0;
+}
