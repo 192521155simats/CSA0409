@@ -1,0 +1,67 @@
+1.
+
+The deadlock occurs because both processes try to access the same two resources in a different order. Process P1 first locks R1 and then waits to lock R2. 
+At the same time, Process P2 locks R2 and waits to lock R1. Since each process is waiting for the resource held by the other, neither of them can continue.
+This creates a circular waiting condition, which is one of the four necessary conditions for deadlock.
+The exact reason for the deadlock is:
+P1 holds R1 and waits for R2.
+P2 holds R2 and waits for R1.
+Neither process releases its first resource.
+Both remain blocked forever.To eliminate the deadlock without changing the process logic, the resources should always be locked in the same order. 
+For example, both processes should first lock R1 and then R2. This removes the circular wait condition. Another possible optimization is to use a
+timeout while waiting for a resource. If a process cannot obtain the second resource within the specified time, it releases the first resource and retries later. 
+This prevents the system from remaining in a deadlock state.
+
+2.
+The CPU utilization is only 30%, even though processes are ready to execute. The scheduler log shows repeated transitions from 
+Ready → Waiting → Ready, indicating that the processes are spending most of their time waiting for I/O operations instead of performing CPU execution.The main
+reason for low CPU utilization is frequent I/O requests. Whenever a process requests an I/O operation, it moves to the waiting state. 
+Since many processes behave in the same way, the CPU remains idle for a significant amount of time.Another reason may be poor scheduling, where the 
+operating system fails to schedule another ready process immediately after one process enters the waiting state. This results in unnecessary idle CPU time.
+The following system-level optimizations can improve CPU utilization:
+Increase the degree of multiprogramming so that more processes are available in memory.
+Use efficient CPU scheduling algorithms to switch quickly to another ready process.
+Improve I/O scheduling to reduce waiting time.
+Use asynchronous I/O whenever possible so that CPU and I/O operations can occur simultaneously.
+These improvements ensure that whenever one process waits for I/O, another process can use the CPU, thereby increasing overall utilization.
+
+3.
+
+The program experiences frequent page faults because it uses a large amount of memory. The heap occupies 150 MB, and each of the 25 threads 
+has its own stack of 1 MB. Since many threads access memory simultaneously, the operating system frequently loads pages from secondary storage into RAM, 
+increasing page faults.Although the system has 2 GB of RAM, poor memory management and unnecessary memory allocation can still cause performance degradation.
+The first optimization is to reduce the number of active threads or decrease the stack size allocated to each thread. This reduces memory consumption and lowers 
+the number of page faults.The second optimization is to improve heap memory management. The program should free unused memory immediately and avoid 
+creating unnecessary objects. Efficient memory allocation reduces memory fragmentation and improves performance.
+Additional improvements include:
+Using thread pools instead of creating many threads.
+Improving data locality.
+Using efficient page replacement algorithms.
+These optimizations reduce page faults, improve memory utilization, and increase the overall speed of the application.
+
+4.
+The process P5 is placed in Queue 3, which follows the FCFS scheduling policy. Since Queue 1 and Queue 2 always have higher priority, they continue to
+receive CPU time whenever new processes arrive. As a result, P5 keeps waiting indefinitely.This problem is called starvation. Starvation occurs when a 
+low-priority process does not receive CPU time because higher-priority processes continuously execute.The root cause is the fixed priority scheduling
+mechanism used by the multilevel queue scheduler. There is no mechanism to promote waiting processes to a higher priority.The best optimization is aging.
+In aging, the priority of a process increases gradually as its waiting time increases. After waiting for a certain period, P5 is promoted to a higher-priority 
+queue, allowing it to execute.
+Other improvements include:
+Allocating a fixed percentage of CPU time to lower-priority queues.
+Using a Multilevel Feedback Queue scheduler.
+Periodically boosting the priority of long-waiting processes.
+These techniques ensure fairness and prevent starvation while maintaining good system performance.
+
+5.
+The server performs about 20,000 context switches every second, creating a large amount of overhead. The main reason is that the scheduler uses a 1 ms 
+time quantum, while the average CPU burst time of a thread is 2 ms. Most threads are interrupted before completing their CPU burst, causing frequent context 
+switches.Another reason is the very high frequency of I/O operations. Threads often move between the running and waiting states, increasing the number of 
+scheduler decisions and context switches.Frequent context switching wastes CPU time because the operating system must save the current process state,
+load the next process state, update scheduling information, and refresh CPU registers. This overhead reduces useful CPU execution.
+The first optimization is to increase the time quantum. For example, increasing it from 1 ms to 4 ms or 5 ms allows threads to complete more work
+before being preempted, reducing unnecessary switches.The second optimization is to improve I/O scheduling. Buffering requests, batching I/O operations, 
+and using asynchronous I/O reduce the number of waiting transitions and context switches.
+Other possible improvements are:
+Using thread pools.
+Reducing unnecessary preemption.
+Selecting an appropriate scheduling algorithm based on workload.
