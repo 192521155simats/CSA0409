@@ -1,0 +1,197 @@
+1.code:
+#include <stdio.h>
+
+int main() {
+    int base, limit, logical, physical;
+
+    printf("Enter Base Register: ");
+    scanf("%d", &base);
+
+    printf("Enter Limit Register: ");
+    scanf("%d", &limit);
+
+    printf("Enter Logical Address: ");
+    scanf("%d", &logical);
+
+    if (logical >= 0 && logical < limit) {
+        physical = base + logical;
+        printf("Valid Address\n");
+        printf("Physical Address = %d\n", physical);
+    } else {
+        printf("Invalid Address! Access Denied.\n");
+    }
+
+    return 0;
+}
+o/p:
+Enter Base Register: 5
+Enter Limit Register: 10
+Enter Logical Address: 17
+Invalid Address! Access Denied.
+
+2.code:
+#include <stdio.h>
+
+int main() {
+    int pageTable[10];
+    int n, page, offset, pageSize;
+
+    printf("Enter number of pages: ");
+    scanf("%d", &n);
+
+    printf("Enter page size: ");
+    scanf("%d", &pageSize);
+
+    printf("Enter Frame Numbers:\n");
+
+    for(int i=0;i<n;i++) {
+        printf("Page %d -> ", i);
+        scanf("%d",&pageTable[i]);
+    }
+
+    printf("Enter Page Number: ");
+    scanf("%d",&page);
+
+    printf("Enter Offset: ");
+    scanf("%d",&offset);
+
+    if(page<n && offset<pageSize) {
+        int physical = pageTable[page]*pageSize + offset;
+        printf("Physical Address = %d\n", physical);
+    } else {
+        printf("Invalid Page or Offset\n");
+    }
+
+    return 0;
+}
+o/p:Enter number of pages: 5
+Enter page size: 10
+Enter Frame Numbers:
+Page 0 -> 2
+Page 1 -> 5
+Page 2 -> 5
+Page 3 -> 6
+Page 4 -> 7
+Enter Page Number: 2
+Enter Offset: 150
+Invalid Page or Offset
+
+3.code:
+#include <stdio.h>
+
+int main() {
+    int pageTable[20];
+    int pages, page, offset, frameSize;
+
+    printf("Enter number of pages: ");
+    scanf("%d",&pages);
+
+    printf("Enter frame size: ");
+    scanf("%d",&frameSize);
+
+    printf("Enter Page Table Entries:\n");
+
+    for(int i=0;i<pages;i++) {
+        printf("Frame for Page %d: ",i);
+        scanf("%d",&pageTable[i]);
+    }
+
+    printf("Enter Logical Address (Page Offset): ");
+    scanf("%d%d",&page,&offset);
+
+    if(page<pages && offset<frameSize) {
+        printf("Page %d mapped to Frame %d\n",page,pageTable[page]);
+
+        int physical=pageTable[page]*frameSize+offset;
+
+        printf("Physical Address = %d\n",physical);
+    }
+    else
+        printf("Invalid Address\n");
+
+    return 0;
+}
+o/p:
+Enter number of pages: 3
+Enter frame size: 5
+Enter Page Table Entries:
+Frame for Page 0: 11
+Frame for Page 1: 10
+Frame for Page 2: 5
+Enter Logical Address (Page Offset): 15Enter number of pages: 4
+Enter frame size: 100
+
+Frame for Page 0: 3
+Frame for Page 1: 7
+Frame for Page 2: 1
+Frame for Page 3: 9
+Enter Logical Address (Page Offset):
+2
+20
+Page 2 mapped to Frame 1
+Physical Address = 120
+
+4.code:
+#include <stdio.h>
+
+int main() {
+    float memoryTime, tlbTime, hitRatio;
+    float withoutTLB, withTLB;
+
+    printf("Enter Memory Access Time (ns): ");
+    scanf("%f",&memoryTime);
+
+    printf("Enter TLB Access Time (ns): ");
+    scanf("%f",&tlbTime);
+
+    printf("Enter TLB Hit Ratio (0 to 1): ");
+    scanf("%f",&hitRatio);
+
+    withoutTLB = 2 * memoryTime;
+
+    withTLB = hitRatio * (tlbTime + memoryTime)
+            + (1-hitRatio) * (tlbTime + 2*memoryTime);
+
+    printf("\nWithout TLB = %.2f ns\n",withoutTLB);
+    printf("With TLB = %.2f ns\n",withTLB);
+
+    return 0;
+}
+o/p:
+Enter Memory Access Time: 100
+Enter TLB Access Time: 20
+Enter TLB Hit Ratio: 0.8
+Without TLB = 200.00 ns
+With TLB = 140.00 ns
+
+5.code:
+#include <stdio.h>
+
+int main() {
+    int base, limit, logical;
+
+    printf("Enter Base Register: ");
+    scanf("%d",&base);
+
+    printf("Enter Limit Register: ");
+    scanf("%d",&limit);
+
+    printf("Enter Logical Address: ");
+    scanf("%d",&logical);
+
+    if(logical>=0 && logical<limit) {
+        printf("Access Allowed\n");
+        printf("Physical Address = %d\n",base+logical);
+    }
+    else {
+        printf("Access Denied! Memory Protection Violation.\n");
+    }
+
+    return 0;
+}
+o/p:
+Enter Base Register: 2000
+Enter Limit Register: 1000
+Enter Logical Address: 750
+Access Allowed
+Physical Address = 2750
