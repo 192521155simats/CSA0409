@@ -1,0 +1,340 @@
+1. Optimized Linux File System Layout and Storage Management
+Scenario Analysis
+The server has 50 GB total storage and must store rapidly growing system logs, user files, and application data.
+The major risk is that logs may consume the entire disk and prevent critical services from operating.
+Total = 50 GB
+
+The important design decision is to keep /var separate from /. 
+Since system logs are normally stored under /var/log, a separate /var prevents rapidly growing logs from filling the root filesystem.
+Log Rotation
+Use logrotate to control log growth.
+Example:
+sudo nano /etc/logrotate.d/systemlogs
+Configuration:
+/var/log/*.log {
+    daily
+    rotate 10
+    size 1G
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
+
+This ensures old logs are rotated, compressed and eventually removed.
+
+Check configuration:
+
+sudo logrotate -d /etc/logrotate.conf
+
+Force rotation:
+
+sudo logrotate -f /etc/logrotate.conf
+Monitoring Disk Usage
+df -h
+du -sh /var/log/*
+
+Set up monitoring so that an administrator is alerted when /var approaches its capacity.
+
+Ensuring Logs Do Not Exceed 10 GB
+
+The /var partition is limited to 10 GB, and logrotate continuously rotates and compresses old logs. 
+Disk monitoring can trigger cleanup/alerts before the partition becomes completely full.
+
+Result
+
+The partitioned design isolates logs, user data and applications. Therefore, excessive log growth 
+cannot easily consume the space required by the operating system, helping critical services continue operating.
+2. Kernel-Level Optimization for High CPU Workloads
+Scenario Analysis
+
+The system experiences frequent context switching delays during high CPU workloads. 
+Hardware upgrades are unavailable, so optimization must be performed at the kernel level.
+1. Scheduler Tuning
+
+Linux scheduler parameters can be examined and tuned using:
+
+sysctl -a | grep sched
+
+For suitable workloads, CPU scheduling behaviour can be adjusted to reduce unnecessary scheduling overhead.
+
+2. CPU Affinity
+
+Bind a CPU-intensive process to selected CPUs:
+
+taskset -cp 2,3 <PID>
+
+This reduces unnecessary movement of the process between CPUs and can improve cache locality.
+
+3. Process Priority
+
+Use:
+
+nice -n -5 ./program
+
+or modify an existing process:
+
+sudo renice -5 -p <PID>
+
+Critical workloads can receive higher scheduling priority where appropriate.
+
+4. Real-Time Scheduling
+
+For real-time workloads, Linux provides real-time scheduling policies such as:
+
+chrt -f 80 ./program
+
+This should be used carefully because excessive real-time priority can starve normal processes.
+
+5. Kernel Modules
+
+Kernel modules allow functionality to be added or removed without rebuilding the entire kernel.
+
+Useful commands:
+
+lsmod
+modinfo <module>
+sudo modprobe <module>
+sudo modprobe -r <module>
+
+Only required modules should be loaded to reduce unnecessary kernel overhead.
+
+Result
+
+Combining scheduler tuning, CPU affinity, appropriate priorities and carefully selected kernel modules can reduce scheduling 
+overhead and improve responsiveness for CPU-intensive and real-time workloads without requiring hardware upgrades.
+3. Processing 1 Million Log Entries Using Shell Scripting
+Scenario Analysis
+
+The administrator needs to process 1 million log entries per day and the script must finish within 2 minutes.
+
+Therefore, the solution should minimize:
+
+External command calls
+Repeated file reading
+Shell loops
+Unnecessary disk I/O
+Inefficient Approach
+
+Avoid:
+
+while read line
+do
+    grep "$line" logfile
+done
+
+This repeatedly launches commands and is inefficient for large files.
+
+Optimized Approach
+
+Use a single-pass command such as:
+
+awk '{count[$5]++} END {for (x in count) print x, count[x]}' logfile
+
+Here, awk reads the file once and processes records in memory.
+
+Example
+
+Suppose the log contains:
+
+10:01 INFO Login
+10:02 ERROR Database
+10:03 INFO Login
+10:04 WARNING Memory
+
+Command:
+
+awk '{count[$2]++} END {for (x in count) print x,count[x]}' logfile
+Useful Commands
+
+grep – fast pattern searching:
+
+grep "ERROR" logfile
+
+awk – field processing and aggregation:
+
+awk '$3=="ERROR" {count++} END {print count}' logfile
+
+sort – sorting:
+
+sort logfile
+
+uniq – counting repeated entries:
+
+sort logfile | uniq -c
+
+For very large files, combine commands carefully to avoid unnecessary processing.
+
+Optimized Script
+#!/bin/bash
+
+LOGFILE="server.log"
+
+awk '
+$3 == "ERROR" { errors++ }
+$3 == "WARNING" { warnings++ }
+$3 == "INFO" { info++ }
+
+END {
+    print "INFO:", info
+    print "WARNING:", warnings
+    print "ERROR:", errors
+}
+' "$LOGFILE"
+Performance Justification
+
+awk is suitable because it:
+
+Processes the file in a single pass
+Avoids spawning a separate command for every line
+Performs filtering and counting in one operation
+Reduces disk I/O
+Uses efficient internal processing
+
+For 1 million entries, this approach is much more suitable than repeatedly invoking 
+commands inside a shell loop and is designed to meet a tight execution-time requirement.
+
+4. Managing a Faulty Process Consuming 90% CPU
+Scenario Analysis
+
+A background process is consuming 90% CPU. The system cannot be restarted, and critical services must remain unaffected.
+
+Therefore, the process should first be identified and monitored, then controlled safely.
+
+Process Management Strategy
+High CPU Usage
+      ↓
+Identify Faulty Process
+      ↓
+Monitor CPU Usage
+      ↓
+Check Process Details
+      ↓
+Reduce Priority
+      ↓
+Monitor Again
+      ↓
+Still Consuming CPU?
+    ↙             ↘
+  NO               YES
+  ↓                 ↓
+Continue       Terminate Safely
+Monitoring          ↓
+                Verify Services
+1. Identify Process
+
+Use:
+
+top
+
+or:
+
+ps aux --sort=-%cpu | head
+
+This displays processes consuming the highest CPU.
+
+2. Monitor the Process
+top -p <PID>
+
+or:
+
+pidstat -p <PID> 1
+3. Inspect Process
+ps -fp <PID>
+
+Check which service/application owns the process before taking action.
+
+4. Reduce Priority
+
+If the process is not critical:
+
+sudo renice 10 -p <PID>
+
+This gives other processes a higher scheduling preference.
+
+5. Stop the Process Gracefully
+
+First attempt:
+
+kill <PID>
+
+Then verify:
+
+ps -p <PID>
+
+Only if it fails to terminate should a stronger signal be considered:
+
+kill -9 <PID>
+6. Protect Critical Services
+
+Before terminating the process:
+
+systemctl status <critical-service>
+
+After intervention:
+
+systemctl status <critical-service>
+Result
+
+The faulty process can be identified, monitored, deprioritized and, if necessary, terminated without rebooting the server. This preserves the operation of critical services.
+
+5. Resource Allocation for 5 Virtual Machines
+Given
+Physical RAM = 16 GB
+Number of VMs = 5
+Minimum RAM per VM = 2 GB
+Host OS requirement = 4 GB
+Calculate Required RAM
+
+VM requirement:
+
+5 × 2 GB = 10 GB
+
+Host requirement:
+
+4 GB
+
+Total:
+
+10 GB + 4 GB = 14 GB
+
+Available:
+
+16 GB
+
+Remaining:
+
+16 - 14 = 2 GB
+
+Therefore, the requirements are feasible.
+
+Proposed Allocation
+Component	RAM
+Host OS	4 GB
+VM1	2 GB
+VM2	2 GB
+VM3	2 GB
+VM4	2 GB
+VM5	2 GB
+Reserve	2 GB
+Total	16 GB
+
+Memory Management
+
+The remaining 2 GB should be kept as a safety reserve rather than immediately assigning it to VMs.
+
+If supported by the virtualization platform, techniques such as:
+
+Memory ballooning
+Dynamic memory allocation
+Memory overcommitment
+
+can be used carefully.
+
+However, because each VM has a minimum requirement of 2 GB, the minimum allocation should not be reduced below that level.
+
+Result
+
+All five VMs can operate with their required minimum memory while the host retains its required 4 GB. 
+Keeping 2 GB as reserve provides additional
+protection against temporary memory pressure and improves overall system stability.
