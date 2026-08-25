@@ -201,26 +201,7 @@ A background process is consuming 90% CPU. The system cannot be restarted, and c
 
 Therefore, the process should first be identified and monitored, then controlled safely.
 
-Process Management Strategy
-High CPU Usage
-      ↓
-Identify Faulty Process
-      ↓
-Monitor CPU Usage
-      ↓
-Check Process Details
-      ↓
-Reduce Priority
-      ↓
-Monitor Again
-      ↓
-Still Consuming CPU?
-    ↙             ↘
-  NO               YES
-  ↓                 ↓
-Continue       Terminate Safely
-Monitoring          ↓
-                Verify Services
+
 1. Identify Process
 
 Use:
