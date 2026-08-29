@@ -1,0 +1,247 @@
+1. Disk Overflow Management (Log File Rotation & Deletion)
+Scenario Analysis:
+Log files grow continuously. If we simply delete files until usage drops below 80%, we might delete the most recent critical logs.
+A better approach is log rotation (compress old logs) first, then delete the oldest logs if space is still insufficient. 
+We must also avoid deleting the currently active log file.
+
+Improved Pseudocode:
+BEGIN
+    SET threshold = 80%                      // Disk usage trigger
+    SET min_free_space = 20%                 // Target free space
+
+    // 1. Check current usage
+    usage = GET_DISK_USAGE("/var/log")
+    
+    IF usage > threshold THEN
+        // 2. Identify all log files (excluding the active one, e.g., "app.log")
+        log_files = LIST_FILES("/var/log/*.log*") 
+        SORT log_files BY last_modified_date ASCENDING  // Oldest first
+        
+        // 3. First pass: Compress uncompressed logs (.log to .log.gz)
+        FOR each file IN log_files WHERE file DOES NOT end with ".gz" DO
+            COMPRESS file TO file.gz
+            DELETE original file
+            usage = GET_DISK_USAGE("/var/log")
+            IF usage <= threshold THEN
+                BREAK
+            ENDIF
+        ENDFOR
+
+        // 4. Second pass: If still over threshold, delete oldest compressed logs
+        IF usage > threshold THEN
+            log_files = LIST_FILES("/var/log/*.log.gz")
+            SORT log_files BY last_modified_date ASCENDING  // Oldest first
+            FOR each file IN log_files DO
+                DELETE file                           // Delete oldest archive
+                usage = GET_DISK_USAGE("/var/log")
+                IF usage <= threshold THEN
+                    BREAK
+                ENDIF
+            ENDFOR
+        ENDIF
+    ENDIF
+
+    // 5. Alert admin if still over threshold after all deletions
+    IF usage > threshold THEN
+        SEND_ALERT("Manual cleanup required: disk usage at ", usage)
+    ENDIF
+END
+Why this is better: It preserves recent data (via compression) and only deletes the oldest archived files as a last resort, 
+2. Priority-Based CPU Scheduling (with Aging)
+Scenario Analysis:
+A naive priority scheduler can cause starvation (low-priority processes never run). To improve CPU efficiency and fairness, 
+we must implement dynamic priority aging, where waiting processes gradually increase in priority. We also use a max-heap (priority queue) 
+for O(log n) selection instead of sorting the whole list repeatedly.
+
+Improved Pseudocode:
+BEGIN
+    // Input: List of processes with (PID, base_priority, remaining_time)
+    INPUT process_list
+    
+    // Initialize priority queue (max-heap) based on effective priority
+    priority_queue = EMPTY_HEAP()
+    FOR each process IN process_list DO
+        process.effective_priority = process.base_priority
+        process.waiting_time = 0
+        INSERT process INTO priority_queue
+    ENDFOR
+
+    WHILE priority_queue IS NOT EMPTY DO
+        // 1. Select process with highest effective priority
+        current = EXTRACT_MAX(priority_queue)
+        
+        // 2. Allocate CPU time (time quantum, e.g., 10ms)
+        ALLOCATE CPU time_quantum TO current
+        EXECUTE current FOR time_quantum
+        current.remaining_time = current.remaining_time - time_quantum
+
+        // 3. Aging: Increment waiting time for all other processes
+        FOR each process IN priority_queue DO
+            process.waiting_time = process.waiting_time + time_quantum
+            // Boost priority by 1 for every 100ms waited (aging)
+            process.effective_priority = process.base_priority 
+                                         + (process.waiting_time / 100)
+        ENDFOR
+
+        // 4. Re-insert if not completed
+        IF current.remaining_time > 0 THEN
+            // Reset waiting time as it just ran
+            current.waiting_time = 0 
+            INSERT current INTO priority_queue
+        ELSE
+            PRINT "Process ", current.PID, " completed."
+        ENDIF
+    ENDWHILE
+END
+
+Q3. RAM Distribution among Virtual Machines
+Scenario Analysis:
+Total RAM is 16GB, with 4GB reserved for the host, leaving 12GB available. If we allocate a flat 2GB to every VM, we can only 
+support 6 VMs (12/2 = 6). A better algorithm distributes the memory fairly based on demand, guaranteeing a minimum but allowing extra 
+RAM to VMs that need it (weighted fair sharing).
+
+Improved Pseudocode:
+
+BEGIN
+    // System constants
+    total_RAM = 16 GB
+    host_reserved = 4 GB
+    available_RAM = total_RAM - host_reserved   // = 12 GB
+    min_RAM_per_VM = 2 GB
+
+    INPUT number_of_VMs
+    
+    // 1. Check if minimum requirements can be met
+    IF number_of_VMs * min_RAM_per_VM > available_RAM THEN
+        PRINT "Error: Insufficient memory for minimum requirements."
+        PRINT "Maximum VMs supported: ", (available_RAM / min_RAM_per_VM)
+        EXIT
+    ENDIF
+
+    // 2. Calculate leftover RAM after allocating minimums
+    allocated_RAM = 0
+    FOR i = 1 TO number_of_VMs DO
+        VM[i].guaranteed = min_RAM_per_VM
+        VM[i].allocated = min_RAM_per_VM
+        allocated_RAM = allocated_RAM + min_RAM_per_VM
+    ENDFOR
+
+    extra_RAM = available_RAM - allocated_RAM   // RAM to distribute dynamically
+
+    // 3. Distribute extra RAM based on VM priority/weight (e.g., equally or weighted)
+    total_weight = SUM(VM[i].weight)            // Assume each VM has a weight
+    FOR i = 1 TO number_of_VMs DO
+        IF extra_RAM > 0 THEN
+            share = (VM[i].weight / total_weight) * extra_RAM
+            VM[i].allocated = VM[i].allocated + share
+            extra_RAM = extra_RAM - share
+        ENDIF
+        // Allocate physically to the VM
+        ALLOCATE RAM of size VM[i].allocated TO VM[i]
+        PRINT "VM", i, " allocated ", VM[i].allocated, " GB"
+    ENDFOR
+
+    // 4. Ballooning/Dynamic adjustment (optional)
+    // Monitor VM memory pressure and borrow unused memory via balloon driver.
+END
+
+Q4. Hypervisor Selection
+Scenario Analysis:
+We need to select between Type-1 (Bare-Metal) and Type-2 (Hosted) hypervisors.
+
+Type-1 (e.g., VMware ESXi, KVM) runs directly on hardware, offers near-native performance, direct hardware access (VT-d/IOMMU),
+but requires dedicated hardware management.
+
+Type-2 (e.g., VirtualBox, VMware Workstation) runs on top of an existing OS, is cheaper/easier, but has higher latency and limited hardware passthrough.
+
+Improved Pseudocode with Nuanced Justification:
+
+BEGIN
+    INPUT performance_required      // (HIGH, MEDIUM, LOW)
+    INPUT budget_constraint         // (HIGH, LOW)
+    INPUT hardware_access_needed    // (TRUE, FALSE) e.g., GPU/PCIe passthrough
+    INPUT admin_skill_level         // (EXPERT, BEGINNER)
+
+    // Decision Matrix
+    IF performance_required == HIGH OR hardware_access_needed == TRUE THEN
+        // Type-1 is mandatory for direct hardware access and low overhead
+        SELECT "Type-1 Hypervisor (e.g., VMware ESXi, KVM, Xen)"
+    ELSE IF budget_constraint == LOW AND admin_skill_level == BEGINNER THEN
+        // Type-2 is cheaper (often free) and easier to set up on Windows/Linux
+        SELECT "Type-2 Hypervisor (e.g., Oracle VirtualBox, VMware Workstation)"
+    ELSE IF performance_required == MEDIUM AND hardware_access_needed == FALSE THEN
+        // Either works, but Type-1 is still preferred for production stability
+        SELECT "Type-1 Hypervisor (Recommended for production servers)"
+    ELSE
+        // Fallback
+        SELECT "Type-2 Hypervisor for development/testing environments"
+    ENDIF
+
+    // Justification Output
+    PRINT "Selected: ", selected_hypervisor
+    PRINT "Reason: "
+    IF selected_hypervisor CONTAINS "Type-1" THEN
+        PRINT "- Provides direct hardware access, minimal latency, and robust resource isolation."
+    ELSE
+        PRINT "- Lower upfront cost, leverages host OS drivers, simpler deployment."
+    ENDIF
+END
+
+Q5. Resource Limiting using cgroups (Control Groups)
+Scenario Analysis:
+To regulate CPU and memory usage per application, we use Linux cgroups (v2 recommended). This prevents a single rogue 
+application from hogging system resources. We need to set absolute limits (e.g., memory.max) and CPU bandwidth limits (e.g., cpu.max) to ensure 
+balanced performance.
+
+Improved Pseudocode with cgroups v2 syntax:
+
+BEGIN
+    INPUT application_list          // List of (app_name, PID, cpu_limit, mem_limit)
+    
+    // Assuming cgroups v2 mounted at /sys/fs/cgroup/
+    cgroup_root = "/sys/fs/cgroup/"
+
+    FOR each app IN application_list DO
+        // 1. Create a dedicated child cgroup for the application
+        cgroup_path = cgroup_root + "app_" + app.name
+        CALL mkdir(cgroup_path)
+        
+        // 2. Set CPU limits (e.g., 100000 = 1 core, 200000 = 2 cores)
+        // Format: "max" or "quota period". Here, setting max bandwidth in microsecs.
+        cpu_limit_file = cgroup_path + "/cpu.max"
+        // If app.cpu_limit is 50%, set quota=50000 period=100000
+        quota = app.cpu_limit * 100000 / 100   // Convert percentage to quota
+        WRITE quota + " 100000" TO cpu_limit_file
+        
+        // 3. Set Memory limits (in bytes)
+        mem_limit_file = cgroup_path + "/memory.max"
+        WRITE app.mem_limit TO mem_limit_file   // e.g., "2147483648" for 2GB
+        
+        // 4. Optionally set Memory swap limit
+        mem_swap_file = cgroup_path + "/memory.swap.max"
+        WRITE app.mem_limit TO mem_swap_file    // Lock swap usage to same limit
+        
+        // 5. Assign the running process(es) to this cgroup
+        procs_file = cgroup_path + "/cgroup.procs"
+        WRITE app.PID TO procs_file
+        
+        // 6. Set controller enablement (for cgroups v2)
+        subtree_control = cgroup_root + "cgroup.subtree_control"
+        WRITE "+cpu +memory" TO subtree_control   // Ensure controllers are active
+
+        PRINT "Applied limits for ", app.name, " (PID: ", app.PID, ")"
+    ENDFOR
+
+    // 7. Monitoring loop (optional)
+    WHILE TRUE DO
+        FOR each app IN application_list DO
+            usage = READ cgroup_path + "/cpu.stat" and "/memory.current"
+            IF usage > app.limit * 0.95 THEN   // 95% threshold
+                LOG_WARNING(app.name, " approaching resource limit.")
+            ENDIF
+        ENDFOR
+        SLEEP 5 seconds
+    ENDWHILE
+END
+
+
